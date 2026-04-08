@@ -1,0 +1,47 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0f0f;
+  color: white;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background: #202020;
+}
+
+h1 {
+  color: red;
+}
+
+#upload {
+  background: red;
+  border: none;
+  padding: 8px;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#videoFeed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+  padding: 20px;
+}
+
+.videoCard {
+  background: #181818;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+video {
+  width: 100%;
+}
+
+.videoTitle {
+  padding: 10px;
+}

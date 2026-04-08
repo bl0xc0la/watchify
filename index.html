@@ -1,31 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Watchify</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>Watchify</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0f0f0f;
+  color: white;
+}
+
+header {
+  padding: 15px;
+  background: #202020;
+  font-size: 24px;
+  color: red;
+}
+
+.uploadBox {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+input, textarea, button {
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+}
+
+button {
+  background: red;
+  color: white;
+  cursor: pointer;
+}
+
+#feed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+  padding: 15px;
+}
+
+.card {
+  background: #181818;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.info {
+  padding: 10px;
+}
+</style>
 </head>
+
 <body>
 
-<header>
-  <h1>Watchify</h1>
-</header>
+<header>Watchify</header>
 
-<section class="uploadBox">
-  <input type="text" id="title" placeholder="Video title">
-  <textarea id="description" placeholder="Description"></textarea>
-  
-  <label>Video:</label>
-  <input type="file" id="videoUpload" accept="video/*">
-
-  <label>Thumbnail:</label>
-  <input type="file" id="thumbUpload" accept="image/*">
-
+<div class="uploadBox">
+  <input id="title" placeholder="Title">
+  <textarea id="desc" placeholder="Description"></textarea>
+  <input type="file" id="video">
+  <input type="file" id="thumb">
   <button id="uploadBtn">Upload</button>
-</section>
+  <div id="status"></div>
+</div>
 
-<main id="videoFeed"></main>
+<div id="feed"></div>
 
-<script type="module" src="app.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAW1rG5UOdmsI3aSGhmSvVtH7TEZlFsK_U",
+  authDomain: "watchify-4f64d.firebaseapp.com",
+  projectId: "watchify-4f64d",
+  storageBucket: "watchify-4f64d.appspot.com", // ✅ FIXED
+  messagingSenderId: "201200324089",
+  appId: "1:201200324089:web:94386fbc088420e5c80128"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+const title = document.getElementById("title");
+const desc = document.getElementById("desc");
+const video = document.getElementById("video");
+const thumb = document.getElementById("thumb");
+const status = document.getElementById("status");
+const feed = document.getElementById("feed");
+
+document.getElementById("uploadBtn").onclick = async () => {
+  try {
+    const v = video.files[0];
+    const t = thumb.files[0];
+
+    if (!v || !t || !title.value) {
+      alert("Fill everything");
+      return;
+    }
+
+    status.innerText = "Uploading video...";
+
+    const videoRef = ref(storage, "videos/" + Date.now() + "_" + v.name);
+    const uploadTask = uploadBytesResumable(videoRef, v);
+
+    uploadTask.on("state_changed", snap => {
+      const percent = (snap.bytesTransferred / snap.totalBytes) * 100;
+      status.innerText = "Video: " + percent.toFixed(0) + "%";
+    });
+
+    await uploadTask;
+
+    const videoURL = await getDownloadURL(videoRef);
+
+    status.innerText = "Uploading thumbnail...";
+
+    const thumbRef = ref(storage, "thumbs/" + Date.now() + "_" + t.name);
+    await uploadBytesResumable(thumbRef, t);
+    const thumbURL = await getDownloadURL(thumbRef);
+
+    status.innerText = "Saving...";
+
+    await addDoc(collection(db, "videos"), {
+      title: title.value,
+      desc: desc.value,
+      videoURL,
+      thumbURL,
+      created: Date.now()
+    });
+
+    status.innerText = "Done!";
+    load();
+
+  } catch (err) {
+    console.error(err);
+    status.innerText = "ERROR: " + err.message;
+  }
+};
+
+async function load() {
+  feed.innerHTML = "";
+
+  const q = query(collection(db, "videos"), orderBy("created", "desc"));
+  const snap = await getDocs(q);
+
+  snap.forEach(doc => {
+    const d = doc.data();
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <img src="${d.thumbURL}">
+      <div class="info">
+        <b>${d.title}</b>
+        <p>${d.desc}</p>
+      </div>
+    `;
+
+    card.onclick = () => {
+      const win = window.open();
+      win.document.write(`
+        <video src="${d.videoURL}" controls autoplay style="width:100%"></video>
+        <h2>${d.title}</h2>
+        <p>${d.desc}</p>
+      `);
+    };
+
+    feed.appendChild(card);
+  });
+}
+
+load();
+</script>
+
 </body>
 </html>

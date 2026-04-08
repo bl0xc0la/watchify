@@ -9,8 +9,20 @@
 
 <header>
   <h1>Watchify</h1>
-  <input type="file" id="upload" accept="video/*">
 </header>
+
+<section class="uploadBox">
+  <input type="text" id="title" placeholder="Video title">
+  <textarea id="description" placeholder="Description"></textarea>
+  
+  <label>Video:</label>
+  <input type="file" id="videoUpload" accept="video/*">
+
+  <label>Thumbnail:</label>
+  <input type="file" id="thumbUpload" accept="image/*">
+
+  <button id="uploadBtn">Upload</button>
+</section>
 
 <main id="videoFeed"></main>
 

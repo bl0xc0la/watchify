@@ -1,9 +1,7 @@
-// Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
-// Your config
 const firebaseConfig = {
   apiKey: "AIzaSyAW1rG5UOdmsI3aSGhmSvVtH7TEZlFsK_U",
   authDomain: "watchify-4f64d.firebaseapp.com",
@@ -15,32 +13,46 @@ const firebaseConfig = {
   measurementId: "G-FBZQZGW8KR"
 };
 
-// Init
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Elements
-const upload = document.getElementById("upload");
+// عناصر
+const titleInput = document.getElementById("title");
+const descInput = document.getElementById("description");
+const videoInput = document.getElementById("videoUpload");
+const thumbInput = document.getElementById("thumbUpload");
+const uploadBtn = document.getElementById("uploadBtn");
 const feed = document.getElementById("videoFeed");
 
-// Upload video
-upload.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+// Upload logic
+uploadBtn.addEventListener("click", async () => {
+  const title = titleInput.value;
+  const description = descInput.value;
+  const videoFile = videoInput.files[0];
+  const thumbFile = thumbInput.files[0];
 
-  const storageRef = ref(storage, "videos/" + Date.now() + "_" + file.name);
+  if (!videoFile || !thumbFile || !title) {
+    alert("Fill everything");
+    return;
+  }
 
-  // Upload to Firebase Storage
-  await uploadBytes(storageRef, file);
+  // Upload video
+  const videoRef = ref(storage, "videos/" + Date.now() + "_" + videoFile.name);
+  await uploadBytes(videoRef, videoFile);
+  const videoURL = await getDownloadURL(videoRef);
 
-  // Get URL
-  const url = await getDownloadURL(storageRef);
+  // Upload thumbnail
+  const thumbRef = ref(storage, "thumbnails/" + Date.now() + "_" + thumbFile.name);
+  await uploadBytes(thumbRef, thumbFile);
+  const thumbURL = await getDownloadURL(thumbRef);
 
-  // Save to Firestore
+  // Save data
   await addDoc(collection(db, "videos"), {
-    title: file.name,
-    url: url,
+    title,
+    description,
+    videoURL,
+    thumbURL,
     created: Date.now()
   });
 
@@ -60,19 +72,39 @@ async function loadVideos() {
     const card = document.createElement("div");
     card.className = "videoCard";
 
-    const video = document.createElement("video");
-    video.src = data.url;
-    video.controls = true;
+    const thumb = document.createElement("img");
+    thumb.src = data.thumbURL;
+    thumb.className = "thumbnail";
+
+    const info = document.createElement("div");
+    info.className = "videoInfo";
 
     const title = document.createElement("div");
     title.className = "videoTitle";
     title.textContent = data.title;
 
-    card.appendChild(video);
-    card.appendChild(title);
+    const desc = document.createElement("div");
+    desc.className = "videoDesc";
+    desc.textContent = data.description;
+
+    info.appendChild(title);
+    info.appendChild(desc);
+
+    card.appendChild(thumb);
+    card.appendChild(info);
+
+    // Click to play
+    card.onclick = () => {
+      const win = window.open();
+      win.document.write(`
+        <video src="${data.videoURL}" controls autoplay style="width:100%"></video>
+        <h2>${data.title}</h2>
+        <p>${data.description}</p>
+      `);
+    };
+
     feed.appendChild(card);
   });
 }
 
-// Load on start
 loadVideos();
